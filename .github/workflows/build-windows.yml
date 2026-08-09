@@ -53,6 +53,9 @@ jobs:
           # GitHub windows-latest runner 现在装的是 Visual Studio 18，
           # preinstall 只认 2019/2022 路径，用 vs2022_install 指向实际安装目录绕过检查
           vs2022_install: 'C:\Program Files\Microsoft Visual Studio\18\Enterprise'
+          # Git Bash 会把 ComSpec 转成 MSYS 路径导致 Node spawn cmd.exe ENOENT，显式固定 Windows 格式
+          ComSpec: 'C:\Windows\System32\cmd.exe'
+          SHELL: 'C:\Windows\System32\cmd.exe'
         run: |
           cd vscode
           node build/npm/preinstall.ts
