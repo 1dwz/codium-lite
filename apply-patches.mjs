@@ -80,6 +80,21 @@ console.log('\n>>> [1/6] product.json (改名 + 移除 AI + Open VSX)');
   p['updateUrl'] = 'https://github.com/1dwz/codium-lite/releases';
   p['downloadUrl'] = 'https://github.com/1dwz/codium-lite/releases';
 
+  // win32 打包必需字段（上游微软版 product.json 才有，OSS 版缺失会导致打包崩溃）
+  p['win32AppId'] = '{{2E1F05D1-C245-4562-81EE-28188DB6FD17}';
+  p['win32x64AppId'] = '{{88DA3577-054F-4CA1-8122-7D820494CFFB}';
+  p['win32arm64AppId'] = '{{67DEE444-3D04-4258-B92A-BC1F0FF2CAE4}';
+  p['win32UserAppId'] = '{{0FD05EB4-651E-4E78-A062-515204B47A3A}';
+  p['win32x64UserAppId'] = '{{B2E0DDB2-120E-4D34-9F7E-8C688FF839A2}';
+  p['win32arm64UserAppId'] = '{{44721278-64C6-4513-BC45-D48E07830599}';
+  p['win32ContextMenu'] = {
+    x64: { clsid: 'D910D5E6-B277-4F4A-BDC5-759A34EEE25D' },
+    arm64: { clsid: '4852FC55-4A84-4EA1-9C86-D53BE3DF83C0' }
+  };
+  p['win32ShellNameShort'] = 'CodiumLite';
+  p['win32TunnelServiceMutex'] = 'codiumlite-tunnelservice';
+  p['win32TunnelMutex'] = 'codiumlite-tunnel';
+
   // 移除 AI / Copilot 配置
   for (const key of ['defaultChatAgent', 'trustedExtensionAuthAccess',
     'builtInExtensionsEnabledWithAutoUpdates', 'voiceWsUrl',
