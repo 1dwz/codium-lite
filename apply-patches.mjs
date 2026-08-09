@@ -189,7 +189,7 @@ console.log('\n>>> [4/6] 内置扩展下载走 GitHub（checksum 匹配）');
 // ================================================================
 // 5. Copilot shim 条件跳过
 // ================================================================
-console.log('\n>>> [5/6] Copilot shim 条件跳过');
+console.log('\n>>> [5/7] Copilot shim 条件跳过');
 {
   const full = join(repoDir, 'build/gulpfile.vscode.ts');
   let content = readFileSync(full, 'utf8');
@@ -210,7 +210,7 @@ console.log('\n>>> [5/6] Copilot shim 条件跳过');
 // ================================================================
 // 6. 遥测 URL 替换
 // ================================================================
-console.log('\n>>> [6/6] 遥测 URL 替换 → 0.0.0.0');
+console.log('\n>>> [6/7] 遥测 URL 替换 → 0.0.0.0');
 {
   const patterns = [
     /\/\/[^"'\s]*\.data\.microsoft\.com/g,
@@ -233,6 +233,42 @@ console.log('\n>>> [6/6] 遥测 URL 替换 → 0.0.0.0');
     } catch { /* binary */ }
   }
   console.log(`  已替换 ${replaced} 个文件中的遥测端点`);
+}
+
+// ================================================================
+// 7. signtool 容错（Windows 打包时如果没装 Windows SDK 跳过签名操作）
+// ================================================================
+console.log('\n>>> [7/7] signtool 容错补丁（跳过签名验证）');
+{
+  const full = join(repoDir, 'build/gulpfile.vscode.ts');
+  let content = readFileSync(full, 'utf8');
+  if (content.includes('CodiumLite signtool patch')) {
+    console.log('  已打过补丁，跳过');
+  } else {
+    const old = `function hasAuthenticodeSignature(filePath: string): Promise<boolean> {
+	return new Promise((resolve, reject) => {
+		const proc = cp.spawn('signtool.exe', ['verify', '/pa', filePath]);
+		proc.on('error', reject);
+		proc.on('exit', code => resolve(code === 0));
+	});
+}`;
+    const neu = `function hasAuthenticodeSignature(filePath: string): Promise<boolean> {
+	// CodiumLite signtool patch: if signtool is not available (e.g. no Windows SDK
+	// in CI), treat binaries as unsigned so the strip step is skipped.
+	return new Promise((resolve) => {
+		const proc = cp.spawn('signtool.exe', ['verify', '/pa', filePath]);
+		proc.on('error', () => resolve(false));
+		proc.on('exit', code => resolve(code === 0));
+	});
+}`;
+    if (content.includes(old)) {
+      content = content.replace(old, neu);
+      writeFileSync(full, content, 'utf8');
+      console.log('  gulpfile.vscode.ts signtool 已容错');
+    } else {
+      console.log('  WARN: signtool 函数模式未匹配，跳过');
+    }
+  }
 }
 
 console.log('\n=============================================');
