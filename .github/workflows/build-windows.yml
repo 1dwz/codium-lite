@@ -1,0 +1,102 @@
+name: Build Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'apply-patches.mjs'
+      - '.github/workflows/build-windows.yml'
+
+env:
+  NODE_OPTIONS: '--max-old-space-size=8192'
+  VSCODE_PUBLISH_COUNTER: '1'
+  ELECTRON_MIRROR: 'https://npmmirror.com/mirrors/electron/'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 240
+    steps:
+      - name: Checkout scripts
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Clone upstream vscode
+        shell: bash
+        run: |
+          git clone --depth 1 https://github.com/microsoft/vscode.git vscode
+          cd vscode
+          echo "UPSTREAM_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Apply CodiumLite patches
+        shell: bash
+        run: |
+          node apply-patches.mjs vscode
+
+      - name: npm ci
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd vscode
+          node build/npm/preinstall.ts
+          npm ci --no-audit --no-fund
+
+      - name: gulp compile
+        shell: bash
+        run: |
+          cd vscode
+          npm run gulp compile
+
+      - name: Bundle desktop (esbuild)
+        shell: bash
+        run: |
+          cd vscode
+          cat > bundle-desktop.mjs <<'EOF'
+          import { runEsbuildBundle } from './build/lib/esbuild.ts';
+          const commit = process.env.UPSTREAM_COMMIT || '';
+          await runEsbuildBundle('out-vscode-min', true, true, 'desktop',
+            'https://main.vscode-cdn.net/sourcemaps/' + commit + '/core');
+          console.log('desktop bundle done');
+          EOF
+          node --experimental-strip-types bundle-desktop.mjs
+
+      - name: Package win32 x64
+        shell: bash
+        run: |
+          cd vscode
+          npm run gulp "vscode-win32-x64-min-ci"
+
+      - name: Create zip
+        shell: bash
+        run: |
+          cd vscode/..
+          RELEASE="1.133.0-$(date +%Y%m%d%H%M)"
+          echo "RELEASE_VERSION=$RELEASE" >> "$GITHUB_ENV"
+          powershell -Command "Compress-Archive -Path VSCode-win32-x64/* -DestinationPath CodiumLite-win32-x64-$RELEASE.zip -Force"
+          ls -la CodiumLite-win32-x64-*.zip
+
+      - name: Create checksums
+        shell: bash
+        run: |
+          powershell -Command "Get-FileHash CodiumLite-win32-x64-$RELEASE_VERSION.zip -Algorithm SHA256 | Select-Object -ExpandProperty Hash > CodiumLite-win32-x64-$RELEASE_VERSION.zip.sha256"
+          cat CodiumLite-win32-x64-$RELEASE_VERSION.zip.sha256
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: codiumlite-win32-x64
+          path: |
+            CodiumLite-win32-x64-*.zip
+            CodiumLite-win32-x64-*.sha256
+          retention-days: 7
