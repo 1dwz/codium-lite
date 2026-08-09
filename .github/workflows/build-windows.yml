@@ -57,19 +57,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          npm --version
-          node --version
           # 显式设置 script-shell 绕过 npm 的 cmd.exe 解析 bug
           npm config set script-shell "C:\Windows\System32\cmd.exe"
-          # 快速验证 npm 能否运行 postinstall
-          $dir = "$pwd\nptest"
-          New-Item -ItemType Directory -Path $dir -Force | Out-Null
-          Set-Content -Path "$dir\package.json" -Value '{ "name": "nptest", "version": "1.0.0", "scripts": { "postinstall": "node -e \"console.log(123)\"" } }'
-          Push-Location $dir
-          npm install --no-audit --no-fund
-          Pop-Location
           cd vscode
           node build/npm/preinstall.ts
+          # postinstall.ts 会在 Windows CI 上因 cmd.exe spawn bug 失败，先打容错补丁
+          node ../patch-postinstall.mjs .
           npm ci --no-audit --no-fund
 
       - name: gulp compile
