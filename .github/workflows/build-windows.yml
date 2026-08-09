@@ -31,8 +31,8 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Setup MSVC environment
-        uses: ilammy/msvc-dev-cmd@v1
+      # 说明：不显式初始化 MSVC 环境。node-gyp 会通过注册表自动定位 VS 并调用 vcvars，
+      # 显式的 msvc-dev-cmd 会干扰 Git Bash 下 npm 的 cmd.exe spawn（ComSpec/路径转换问题）。
 
       - name: Clone upstream vscode
         shell: bash
@@ -47,15 +47,14 @@ jobs:
           node apply-patches.mjs vscode
 
       - name: npm ci
-        shell: bash
+        # 用 PowerShell 而非 Git Bash：新 runner 的 Git Bash 有 MSYS 路径转换 bug，
+        # 导致 npm 运行 postinstall 时 spawn cmd.exe ENOENT
+        shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # GitHub windows-latest runner 现在装的是 Visual Studio 18，
           # preinstall 只认 2019/2022 路径，用 vs2022_install 指向实际安装目录绕过检查
           vs2022_install: 'C:\Program Files\Microsoft Visual Studio\18\Enterprise'
-          # Git Bash 会把 ComSpec 转成 MSYS 路径导致 Node spawn cmd.exe ENOENT，显式固定 Windows 格式
-          ComSpec: 'C:\Windows\System32\cmd.exe'
-          SHELL: 'C:\Windows\System32\cmd.exe'
         run: |
           cd vscode
           node build/npm/preinstall.ts
