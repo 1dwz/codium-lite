@@ -26,6 +26,12 @@ jobs:
         with:
           node-version: 24
 
+      - name: Downgrade npm to v10 (npm 11 has cmd.exe spawn bug on new runners)
+        shell: pwsh
+        run: |
+          npm install -g npm@10 --no-audit --no-fund
+          npm --version
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
