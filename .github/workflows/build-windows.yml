@@ -47,15 +47,15 @@ jobs:
           node apply-patches.mjs vscode
 
       - name: npm ci
-        # 用 PowerShell 而非 Git Bash：新 runner 的 Git Bash 有 MSYS 路径转换 bug，
-        # 导致 npm 运行 postinstall 时 spawn cmd.exe ENOENT
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # GitHub windows-latest runner 现在装的是 Visual Studio 18，
-          # preinstall 只认 2019/2022 路径，用 vs2022_install 指向实际安装目录绕过检查
           vs2022_install: 'C:\Program Files\Microsoft Visual Studio\18\Enterprise'
         run: |
+          # 诊断: 确认 cmd.exe 与 ComSpec
+          Write-Host "ComSpec=$env:ComSpec"
+          Write-Host "cmd.exe exists: $(Test-Path 'C:\Windows\system32\cmd.exe')"
+          Write-Host "system32 in PATH: $($env:PATH -split ';' | Where-Object { $_ -ieq 'C:\Windows\system32' })"
           cd vscode
           node build/npm/preinstall.ts
           npm ci --no-audit --no-fund
