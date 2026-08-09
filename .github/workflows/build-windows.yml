@@ -50,6 +50,9 @@ jobs:
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GitHub windows-latest runner 现在装的是 Visual Studio 18，
+          # preinstall 只认 2019/2022 路径，用 vs2022_install 指向实际安装目录绕过检查
+          vs2022_install: 'C:\Program Files\Microsoft Visual Studio\18\Enterprise'
         run: |
           cd vscode
           node build/npm/preinstall.ts
