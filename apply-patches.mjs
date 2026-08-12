@@ -95,12 +95,31 @@ console.log('\n>>> [1/6] product.json (改名 + 移除 AI + Open VSX)');
   p['win32TunnelServiceMutex'] = 'codiumlite-tunnelservice';
   p['win32TunnelMutex'] = 'codiumlite-tunnel';
 
-  // 移除 AI / Copilot 配置
-  for (const key of ['defaultChatAgent', 'trustedExtensionAuthAccess',
+  // 移除 AI / Copilot 配置（不能删 defaultChatAgent：2026 版 welcomeOnboarding 是
+  // Eager singleton，启动期 assertDefined(product.defaultChatAgent)，删了直接白屏）
+  for (const key of ['trustedExtensionAuthAccess',
     'builtInExtensionsEnabledWithAutoUpdates', 'voiceWsUrl',
     'agentsTelemetryAppName', 'sessionsWindowAllowedExtensions']) {
     delete p[key];
   }
+
+  // defaultChatAgent 保留为占位对象：满足启动期 assert，品牌改为 CodiumLite、
+  // URL 指向本仓库；由于 copilot 扩展已删除，登录/chat 实际不可用，仍是无 AI 构建。
+  p['defaultChatAgent'] = {
+    extensionId: 'codiumlite.onboarding',
+    chatExtensionId: 'codiumlite.onboarding',
+    documentationUrl: 'https://github.com/1dwz/codium-lite',
+    termsStatementUrl: 'https://github.com/1dwz/codium-lite',
+    privacyStatementUrl: 'https://github.com/1dwz/codium-lite',
+    publicCodeMatchesUrl: 'https://github.com/1dwz/codium-lite',
+    provider: {
+      default: { id: 'github', name: 'CodiumLite' },
+      enterprise: { id: 'github-enterprise' },
+      google: { id: 'google' },
+      apple: { id: 'apple' }
+    },
+    providerExtensionId: 'vscode.github-authentication'
+  };
 
   // 扩展市场 → Open VSX
   p['extensionsGallery'] = {
