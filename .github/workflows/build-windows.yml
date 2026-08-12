@@ -90,6 +90,17 @@ jobs:
           cd vscode
           npm run gulp "vscode-win32-x64-min-ci"
 
+      - name: Trim locales (keep en/zh-cn/zh-tw only)
+        shell: bash
+        run: |
+          cd vscode/..
+          ls VSCode-win32-x64/locales/ | head -30
+          mkdir -p /tmp/codiumlite-locales
+          mv VSCode-win32-x64/locales/en.pak VSCode-win32-x64/locales/en-US.pak VSCode-win32-x64/locales/zh-cn.pak VSCode-win32-x64/locales/zh-tw.pak /tmp/codiumlite-locales/
+          rm -rf VSCode-win32-x64/locales/*
+          mv /tmp/codiumlite-locales/* VSCode-win32-x64/locales/
+          ls VSCode-win32-x64/locales/
+
       - name: Create zip
         shell: bash
         run: |

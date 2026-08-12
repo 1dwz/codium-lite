@@ -290,6 +290,63 @@ console.log('\n>>> [7/7] signtool 容错补丁（跳过签名验证）');
   }
 }
 
+// ================================================================
+// 8. 源码级剥离 AI 贡献（在 workbench 入口注释掉 chat/agents/sessions/voice 导入）
+//    避免 AI 代码被编译进产物（tree-shake 掉），包体更小、UI 不再出现 AI 入口
+// ================================================================
+console.log('\n>>> [8/8] 源码级剥离 AI 贡献（chat/agents/sessions/voice）');
+{
+  function stripAiImports(relPath, anchors) {
+    const full = join(repoDir, relPath);
+    if (!existsSync(full)) { console.log(`  SKIP (不存在): ${relPath}`); return; }
+    let lines = readFileSync(full, 'utf8').split('\n');
+    let changed = 0;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!/^\s*import\s+'/.test(line)) continue;
+      if (anchors.some(a => line.includes(a))) {
+        if (!line.includes('CodiumLite patch: AI stripped')) {
+          lines[i] = `// CodiumLite patch: AI stripped\n// ${line}`;
+          changed++;
+        }
+      }
+    }
+    if (changed > 0) {
+      writeFileSync(full, lines.join('\n'), 'utf8');
+      console.log(`  [修改] ${relPath}（注释 ${changed} 行 AI 导入）`);
+    } else {
+      console.log(`  WARN: ${relPath} 未匹配到 AI 导入`);
+    }
+  }
+
+  // 注意：agentHost（远程开发）不是 AI，保留
+  stripAiImports('src/vs/workbench/workbench.common.main.ts', [
+    "'../sessions/common/theme.js'",
+    "'../sessions/common/sizes.js'",
+    "'./services/chat/common/chatEntitlementService.js'",
+    "'./contrib/speech/browser/speech.contribution.js'",
+    "'./contrib/chat/browser/chat.shared.contribution.js'",
+    "'./contrib/chat/browser/chat.contribution.js'",
+    "'./contrib/chat/browser/agentSessions/agentHost/agentHost.contribution.js'",
+    "'./contrib/chat/browser/chat.view.contribution.js'",
+    "'./contrib/inlineChat/browser/inlineChat.contribution.js'",
+    "'./contrib/agentsVoice/browser/agentsVoice.contribution.js'",
+    "'./contrib/chat/browser/chatInputWindow/chatInputWindow.contribution.js'",
+    "'./contrib/chat/browser/chatSessions/chatSessions.contribution.js'",
+    "'./contrib/chat/browser/contextContrib/chatContext.contribution.js'",
+    "'./contrib/welcomeAgentSessions/browser/agentSessionsWelcome.contribution.js'",
+    "'./contrib/welcomeOnboarding/browser/welcomeOnboarding.contribution.js'",
+    "'./contrib/editSessions/browser/editSessions.contribution.js'",
+    "'./contrib/remoteCodingAgents/browser/remoteCodingAgents.contribution.js'"
+  ]);
+
+  stripAiImports('src/vs/workbench/workbench.desktop.main.ts', [
+    "'./contrib/chat/electron-browser/chat.contribution.js'",
+    "'./contrib/chat/electron-browser/tunnelHost.contribution.js'",
+    "'./contrib/agentsVoice/electron-browser/agentsVoiceNativeCommands.js'"
+  ]);
+}
+
 console.log('\n=============================================');
 console.log('  ✅ CodiumLite 补丁应用完成！');
 console.log('=============================================');
