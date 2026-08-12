@@ -94,12 +94,18 @@ jobs:
         shell: bash
         run: |
           cd vscode/..
-          ls VSCode-win32-x64/locales/ | head -30
+          echo "=== locales before ==="
+          ls VSCode-win32-x64/locales/
           mkdir -p /tmp/codiumlite-locales
-          mv VSCode-win32-x64/locales/en.pak VSCode-win32-x64/locales/en-US.pak VSCode-win32-x64/locales/zh-cn.pak VSCode-win32-x64/locales/zh-tw.pak /tmp/codiumlite-locales/
+          # only keep if they exist
+          for f in en-US.pak zh-cn.pak zh-tw.pak; do
+            [ -f "VSCode-win32-x64/locales/$f" ] && mv "VSCode-win32-x64/locales/$f" /tmp/codiumlite-locales/
+          done
           rm -rf VSCode-win32-x64/locales/*
           mv /tmp/codiumlite-locales/* VSCode-win32-x64/locales/
+          echo "=== locales after ==="
           ls VSCode-win32-x64/locales/
+
 
       - name: Create zip
         shell: bash
